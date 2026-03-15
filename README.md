@@ -1,5 +1,5 @@
 # Prover Agent Kit
-[![Apache-2.0][apache-badge]][apache-url]
+[![MIT][mit-badge]][mit-url]
 
 [apache-badge]: https://img.shields.io/badge/license-Apache%20License%202.0-blue
 [apache-url]: https://github.com/informalsystems/quint-connect/blob/main/LICENSE
