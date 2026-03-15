@@ -68,7 +68,7 @@ The session runs as `docker run --rm -it` — when you exit, the container is re
 
 ### claude-quint
 
-Quint formal specification with MCP servers for LSP diagnostics and a knowledge base of docs/examples/patterns. Includes slash commands for the full workflow: `/spec:start`, `/verify:generate-witness`, `/code:start`, `/refactor:start`.
+Based on [Quint LLM Kit](https://github.com/informalsystems/quint-llm-kit), which inspired this repo. Quint formal specification with MCP servers for LSP diagnostics and a knowledge base of docs/examples/patterns. Includes slash commands for the full workflow: `/spec:start`, `/verify:generate-witness`, `/code:start`, `/refactor:start`.
 
 ### claude-numina-lean
 
