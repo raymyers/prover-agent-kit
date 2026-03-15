@@ -1,0 +1,6 @@
+name: claude-base
+description: Base image (not runnable directly)
+type: docker
+image: prover-agent-base
+dockerfile: Dockerfile
+exec: claude

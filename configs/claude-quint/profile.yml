@@ -1,0 +1,8 @@
+name: claude-quint
+description: Claude Code + Quint formal specification
+type: docker
+image: prover-agent-claude-quint
+dockerfile: Dockerfile
+volume: prover-agent-config-quint:/home/dev/.claude
+submodule: quint-llm-kit https://github.com/informalsystems/quint-llm-kit.git
+exec: claude

@@ -1,0 +1,7 @@
+name: claude-esbmc
+description: Claude Code + ESBMC formal verification (C/C++/Solidity)
+type: docker
+image: prover-agent-claude-esbmc
+dockerfile: Dockerfile
+volume: prover-agent-config-esbmc:/home/dev/.claude
+exec: claude

@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROVER_AGENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIGS_DIR="$PROVER_AGENT_DIR/configs"
+
+# --- helpers ----------------------------------------------------------------
+
+die()  { echo "prover-agent: $*" >&2; exit 1; }
+bold() { printf '\033[1m%s\033[0m' "$*"; }
+
+# Read a key from a profile.yml (simple key: value, no nesting needed)
+prof_get() {
+  local file="$1" key="$2"
+  grep -m1 "^${key}:" "$file" 2>/dev/null | sed "s/^${key}:[[:space:]]*//"
+}
+
+resolve_profile() {
+  local name="$1"
+  local dir="$CONFIGS_DIR/$name"
+  local yml="$dir/profile.yml"
+  [ -d "$dir" ] || die "unknown profile: $name (no configs/$name/ directory)"
+  [ -f "$yml" ] || die "profile $name has no profile.yml"
+  echo "$yml"
+}
+
+# Ensure the base image exists (builds it if missing)
+ensure_base() {
+  local base_image="prover-agent-base"
+  if ! docker image inspect "$base_image" > /dev/null 2>&1; then
+    echo "Base image $base_image not found, building..."
+    docker build -t "$base_image" -f "$CONFIGS_DIR/claude-base/Dockerfile" "$PROVER_AGENT_DIR"
+  fi
+}
+
+# Fetch submodule declared in profile.yml (format: "submodule: <dir> <url>")
+ensure_submodule() {
+  local yml="$1"
+  local sub; sub=$(prof_get "$yml" "submodule")
+  [ -n "$sub" ] || return 0
+
+  local sub_dir; sub_dir=$(echo "$sub" | awk '{print $1}')
+  local sub_url; sub_url=$(echo "$sub" | awk '{print $2}')
+  local target="$PROVER_AGENT_DIR/$sub_dir"
+
+  if [ -d "$target/.git" ] || [ -f "$target/.git" ]; then
+    echo "Updating $sub_dir ..."
+    git -C "$target" pull --ff-only -q 2>/dev/null || true
+  else
+    echo "Cloning $sub_dir ..."
+    git clone --depth 1 "$sub_url" "$target"
+  fi
+}
+
+# --- commands ---------------------------------------------------------------
+
+cmd_list() {
+  printf "%-25s %s\n" "PROFILE" "DESCRIPTION"
+  printf "%-25s %s\n" "-------" "-----------"
+  for dir in "$CONFIGS_DIR"/*/; do
+    local yml="$dir/profile.yml"
+    [ -f "$yml" ] || continue
+    local name; name=$(basename "$dir")
+    # Skip base image (not runnable directly)
+    [ "$name" = "claude-base" ] && continue
+    local desc; desc=$(prof_get "$yml" "description")
+    printf "%-25s %s\n" "$name" "$desc"
+  done
+}
+
+cmd_build() {
+  local profile="$1"; shift
+  local yml; yml=$(resolve_profile "$profile")
+
+  local image; image=$(prof_get "$yml" "image")
+  local dockerfile; dockerfile=$(prof_get "$yml" "dockerfile")
+  local dir; dir=$(dirname "$yml")
+
+  ensure_submodule "$yml"
+  ensure_base
+  echo "Building image $image ..."
+  docker build -t "$image" -f "$dir/$dockerfile" "$@" "$PROVER_AGENT_DIR"
+}
+
+cmd_run() {
+  local profile="$1"; shift
+  local yml; yml=$(resolve_profile "$profile")
+  local image; image=$(prof_get "$yml" "image")
+  local exec_cmd; exec_cmd=$(prof_get "$yml" "exec")
+  local volume; volume=$(prof_get "$yml" "volume")
+  local dir; dir=$(dirname "$yml")
+
+  # Parse positional: [DIR] [-- extra args...]
+  local workspace=""
+  local -a extra_args=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --) shift; extra_args=("$@"); break ;;
+      *)  workspace="$1"; shift ;;
+    esac
+  done
+
+  # Resolve workspace
+  if [ -z "$workspace" ]; then
+    workspace="$(pwd)"
+  else
+    workspace="${workspace/#\~/$HOME}"
+    workspace="$(cd "$workspace" && pwd)"
+  fi
+
+  # Auto-build if image doesn't exist
+  if ! docker image inspect "$image" > /dev/null 2>&1; then
+    ensure_submodule "$yml"
+    ensure_base
+    echo "Image $image not found, building..."
+    local dockerfile; dockerfile=$(prof_get "$yml" "dockerfile")
+    docker build -t "$image" -f "$dir/$dockerfile" "$PROVER_AGENT_DIR"
+  fi
+
+  # Build docker run args
+  local -a run_args=(
+    --rm -it
+    -v "$workspace:/workspace"
+    -v "prover-agent-credentials:/home/dev/.claude-credentials"
+  )
+
+  # Add per-profile config volume if configured
+  if [ -n "$volume" ]; then
+    run_args+=(-v "$volume")
+  fi
+
+  # Pass through API keys from environment
+  [ -n "${ANTHROPIC_API_KEY:-}" ] && run_args+=(-e ANTHROPIC_API_KEY)
+  [ -n "${OPENAI_API_KEY:-}" ]    && run_args+=(-e OPENAI_API_KEY)
+
+  echo "Starting $exec_cmd in $workspace ..."
+  exec docker run "${run_args[@]}" "$image" $exec_cmd ${extra_args[@]+"${extra_args[@]}"}
+}
+
+cmd_clean() {
+  local profile="$1"; shift
+  local yml; yml=$(resolve_profile "$profile")
+
+  local image; image=$(prof_get "$yml" "image")
+  local volume; volume=$(prof_get "$yml" "volume")
+  local vol_name=""
+
+  # Extract volume name (before the colon)
+  if [ -n "$volume" ]; then
+    vol_name="${volume%%:*}"
+  fi
+
+  echo "Removing image $image ..."
+  docker rmi "$image" 2>/dev/null || true
+
+  if [ -n "$vol_name" ]; then
+    echo "Removing volume $vol_name ..."
+    docker volume rm "$vol_name" 2>/dev/null || true
+  fi
+
+  echo "Clean complete."
+}
+
+cmd_status() {
+  docker ps --filter "label=prover-agent" 2>/dev/null || true
+}
+
+# --- usage ------------------------------------------------------------------
+
+usage() {
+  cat <<EOF
+$(bold "prover-agent") — prover agent kit
+
+Usage:
+  prover-agent list                              Show available profiles
+  prover-agent run <profile> [dir] [-- args...]  Start interactive session
+  prover-agent build <profile> [docker args...]  Build a docker profile's image
+  prover-agent clean <profile>                   Remove image and volumes
+  prover-agent status                            Show running sessions
+
+Examples:
+  prover-agent run claude-quint ~/my-project
+  prover-agent run claude-quint ~/my-project -- --resume
+  prover-agent build claude-quint --build-arg INSTALL_FOUNDRY=true
+EOF
+}
+
+# --- main -------------------------------------------------------------------
+
+[ $# -ge 1 ] || { usage; exit 0; }
+
+cmd="$1"; shift
+case "$cmd" in
+  list)   cmd_list ;;
+  run)    [ $# -ge 1 ] || die "usage: prover-agent run <profile> [dir] [-- args...]"; cmd_run "$@" ;;
+  build)  [ $# -ge 1 ] || die "usage: prover-agent build <profile> [docker args...]"; cmd_build "$@" ;;
+  clean)  [ $# -ge 1 ] || die "usage: prover-agent clean <profile>"; cmd_clean "$@" ;;
+  status) cmd_status ;;
+  help|-h|--help) usage ;;
+  *)      die "unknown command: $cmd (try 'prover-agent help')" ;;
+esac

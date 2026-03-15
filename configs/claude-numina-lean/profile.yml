@@ -1,0 +1,7 @@
+name: claude-numina-lean
+description: Claude Code + Numina Lean 4 theorem proving
+type: docker
+image: prover-agent-claude-numina-lean
+dockerfile: Dockerfile
+volume: prover-agent-config-numina-lean:/home/dev/.claude
+exec: claude
