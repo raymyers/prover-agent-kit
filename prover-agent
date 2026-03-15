@@ -163,6 +163,9 @@ cmd_clean() {
   echo "Removing image $image ..."
   docker rmi "$image" 2>/dev/null || true
 
+  echo "Removing base image prover-agent-base ..."
+  docker rmi prover-agent-base 2>/dev/null || true
+
   if [ -n "$vol_name" ]; then
     echo "Removing volume $vol_name ..."
     docker volume rm "$vol_name" 2>/dev/null || true
