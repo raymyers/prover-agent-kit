@@ -137,6 +137,12 @@ _run_profile() {
   [ -n "${ANTHROPIC_API_KEY:-}" ] && run_args+=(-e ANTHROPIC_API_KEY)
   [ -n "${OPENAI_API_KEY:-}" ]    && run_args+=(-e OPENAI_API_KEY)
 
+  # Pass host git identity
+  local git_name; git_name=$(git config user.name 2>/dev/null || true)
+  local git_email; git_email=$(git config user.email 2>/dev/null || true)
+  [ -n "$git_name" ]  && run_args+=(-e "GIT_AUTHOR_NAME=$git_name" -e "GIT_COMMITTER_NAME=$git_name")
+  [ -n "$git_email" ] && run_args+=(-e "GIT_AUTHOR_EMAIL=$git_email" -e "GIT_COMMITTER_EMAIL=$git_email")
+
   echo "Starting $exec_cmd in $workspace ..."
   exec docker run "${run_args[@]}" "$image" $exec_cmd ${extra_args[@]+"${extra_args[@]}"}
 }

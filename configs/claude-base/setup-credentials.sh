@@ -30,3 +30,10 @@ else
     # On next start, the migration path above will move them to shared.
     echo "⚠ No credentials found — Claude will prompt for login"
 fi
+
+# Configure git identity from host (passed as env vars by prover-agent)
+if [ -n "${GIT_AUTHOR_NAME:-}" ]; then
+    git config --global user.name "$GIT_AUTHOR_NAME"
+    git config --global user.email "${GIT_AUTHOR_EMAIL:-}"
+    echo "✓ Git identity: $GIT_AUTHOR_NAME <${GIT_AUTHOR_EMAIL:-}>"
+fi
