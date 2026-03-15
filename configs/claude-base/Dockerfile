@@ -24,9 +24,11 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code
 
-# Create non-root user
-RUN useradd -m -s /bin/bash dev && \
-	chown -R dev:dev /workspace
+# Create non-root user with passwordless sudo for apt
+RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/* && \
+	useradd -m -s /bin/bash dev && \
+	chown -R dev:dev /workspace && \
+	echo "dev ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/apt" > /etc/sudoers.d/dev
 
 RUN mkdir -p /home/dev/.claude /home/dev/.claude-credentials && \
 	chown -R dev:dev /home/dev/.claude /home/dev/.claude-credentials
