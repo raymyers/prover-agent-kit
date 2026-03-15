@@ -1,8 +1,8 @@
 # Prover Agent Kit
 [![MIT][mit-badge]][mit-url]
 
-[apache-badge]: https://img.shields.io/badge/license-Apache%20License%202.0-blue
-[apache-url]: https://github.com/informalsystems/quint-connect/blob/main/LICENSE
+[mit-badge]: https://img.shields.io/badge/license-MIT-blue
+[mit-url]: https://github.com/raymyers/prover-agent-kit/blob/main/LICENSE
 
 A containerized toolkit for AI-assisted formal verification and theorem proving. Each profile bundles an AI agent with a prover, MCP servers, skills, and pre-approved permissions into a ready-to-use Docker environment.
 
@@ -68,7 +68,7 @@ The session runs as `docker run --rm -it` — when you exit, the container is re
 
 ### claude-quint
 
-Quint formal specification with MCP servers for LSP diagnostics and a knowledge base of docs/examples/patterns. Includes slash commands for the full workflow: `/spec:start`, `/verify:generate-witness`, `/code:start`, `/refactor:start`. See [GET_STARTED.md](GET_STARTED.md).
+Quint formal specification with MCP servers for LSP diagnostics and a knowledge base of docs/examples/patterns. Includes slash commands for the full workflow: `/spec:start`, `/verify:generate-witness`, `/code:start`, `/refactor:start`.
 
 ### claude-numina-lean
 
@@ -94,4 +94,4 @@ mkdir configs/my-profile
 
 ## License
 
-Apache 2.0
+MIT
