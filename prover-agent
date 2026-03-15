@@ -82,11 +82,15 @@ cmd_build() {
   docker build -t "$image" -f "$dir/$dockerfile" "$@" "$PROVER_AGENT_DIR"
 }
 
-cmd_run() {
+cmd_run()   { _run_profile "" "$@"; }
+cmd_shell() { _run_profile "bash" "$@"; }
+
+_run_profile() {
+  local cmd_override="$1"; shift
   local profile="$1"; shift
   local yml; yml=$(resolve_profile "$profile")
   local image; image=$(prof_get "$yml" "image")
-  local exec_cmd; exec_cmd=$(prof_get "$yml" "exec")
+  local exec_cmd="${cmd_override:-$(prof_get "$yml" "exec")}"
   local volume; volume=$(prof_get "$yml" "volume")
   local dir; dir=$(dirname "$yml")
 
@@ -174,6 +178,7 @@ $(bold "prover-agent") — prover agent kit
 Usage:
   prover-agent list                              Show available profiles
   prover-agent run <profile> [dir] [-- args...]  Start interactive session
+  prover-agent shell <profile> [dir]             Bash shell in profile container
   prover-agent build <profile> [docker args...]  Build a docker profile's image
   prover-agent clean <profile>                   Remove image and volumes
   prover-agent status                            Show running sessions
@@ -193,6 +198,7 @@ cmd="$1"; shift
 case "$cmd" in
   list)   cmd_list ;;
   run)    [ $# -ge 1 ] || die "usage: prover-agent run <profile> [dir] [-- args...]"; cmd_run "$@" ;;
+  shell)  [ $# -ge 1 ] || die "usage: prover-agent shell <profile> [dir]"; cmd_shell "$@" ;;
   build)  [ $# -ge 1 ] || die "usage: prover-agent build <profile> [docker args...]"; cmd_build "$@" ;;
   clean)  [ $# -ge 1 ] || die "usage: prover-agent clean <profile>"; cmd_clean "$@" ;;
   status) cmd_status ;;
