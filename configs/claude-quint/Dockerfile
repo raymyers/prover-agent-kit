@@ -53,8 +53,8 @@ COPY --chown=dev:dev quint-llm-kit/agentic/ /home/dev/.claude/
 # Copy MCP servers
 COPY --chown=dev:dev quint-llm-kit/mcp-servers/lsp-setup/ /home/dev/mcp-servers/lsp-setup/
 COPY --chown=dev:dev quint-llm-kit/mcp-servers/README.md /home/dev/mcp-servers/README.md
-COPY --chown=dev:dev quint-llm-kit/mcp-servers/kb/package.json mcp-servers/kb/package-lock.json /home/dev/mcp-servers/kb/
-COPY --chown=dev:dev quint-llm-kit/mcp-servers/kb/tsconfig.json mcp-servers/kb/jest.config.js /home/dev/mcp-servers/kb/
+COPY --chown=dev:dev quint-llm-kit/mcp-servers/kb/package.json quint-llm-kit/mcp-servers/kb/package-lock.json /home/dev/mcp-servers/kb/
+COPY --chown=dev:dev quint-llm-kit/mcp-servers/kb/tsconfig.json quint-llm-kit/mcp-servers/kb/jest.config.js /home/dev/mcp-servers/kb/
 COPY --chown=dev:dev quint-llm-kit/mcp-servers/kb/src/ /home/dev/mcp-servers/kb/src/
 COPY --chown=dev:dev quint-llm-kit/mcp-servers/kb/scripts/ /home/dev/mcp-servers/kb/scripts/
 COPY --chown=dev:dev quint-llm-kit/mcp-servers/kb/tests/ /home/dev/mcp-servers/kb/tests/
